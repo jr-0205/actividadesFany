@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b10">
+  <title>NexaTech Store · Tecnología útil</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="NexaTech Store">
+      <span class="brand-mark">N</span>
+      <span><strong>NexaTech</strong><small>STORE</small></span>
+    </a>
+    <nav class="navlinks" aria-label="Navegación principal">
+      <a class="active" href="#inicio">Inicio</a>
+      <a href="#catalogo">Catálogo</a>
+      <a href="#agente">Asistente IA</a>
+      <a href="#inventario">Inventario</a>
+    </nav>
+    <button class="cart-button" id="openCart" type="button">
+      <span>Carrito</span><b id="cartCount">0</b>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-copy">
+        <span class="eyebrow"><i></i> PROTOTIPO ACADÉMICO · IA AGÉNTICA</span>
+        <h1>Tecnología útil,<br><span>elegida con criterio.</span></h1>
+        <p>NexaTech reúne un catálogo tecnológico claro, inventario en tiempo real y un asistente multiagente que recomienda solo lo que realmente encaja con tu necesidad.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#catalogo">Explorar catálogo <span>→</span></a>
+          <a class="btn ghost" href="#agente">Probar asistente IA</a>
+        </div>
+        <div class="trust-row">
+          <span><b>✓</b> Stock conectado a SQLite</span>
+          <span><b>✓</b> Precios simulados MXN</span>
+          <span><b>✓</b> Validación multiagente</span>
+        </div>
+      </div>
+      <div class="hero-panel glass">
+        <div class="panel-head"><span>Estado operativo</span><span class="live"><i></i> EN LÍNEA</span></div>
+        <div class="metric-grid">
+          <article><small>Productos</small><strong id="metricProducts">—</strong><span>catálogo inicial</span></article>
+          <article><small>Unidades</small><strong id="metricUnits">—</strong><span>en inventario</span></article>
+          <article><small>Ventas</small><strong id="metricSales">—</strong><span>registradas</span></article>
+          <article><small>Ingresos</small><strong id="metricRevenue">—</strong><span>simulados</span></article>
+        </div>
+        <div class="signal-card">
+          <div class="signal-icon">AI</div>
+          <div><small>ORQUESTADOR A0</small><strong>5 agentes listos para decidir</strong><span>Mercado · Catálogo · Inventario · Ventas · Calidad</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="catalogo">
+      <div class="section-heading">
+        <div><span class="kicker">CATÁLOGO</span><h2>Equipo para tu espacio digital</h2><p>Productos iniciales definidos por la propuesta agéntica de NexaTech Store.</p></div>
+        <div class="catalog-tools">
+          <label class="searchbox"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar producto o SKU..."></label>
+        </div>
+      </div>
+      <div class="filter-row" id="filters"></div>
+      <div class="product-grid" id="productGrid"></div>
+    </section>
+
+    <section class="section agent-section" id="agente">
+      <div class="section-heading compact">
+        <div><span class="kicker">IA AGÉNTICA</span><h2>Recomendador Nexa</h2><p>La consulta pasa por cinco agentes antes de entregarte una opción.</p></div>
+        <span class="agent-badge">A0 ORQUESTANDO</span>
+      </div>
+      <div class="agent-layout">
+        <form class="agent-form glass" id="agentForm">
+          <div class="form-row">
+            <label>Perfil
+              <select id="profile">
+                <option value="estudiante">Estudiante digital</option>
+                <option value="profesionista">Profesionista híbrido</option>
+                <option value="creador">Creador de contenido</option>
+                <option value="gamer">Gamer inicial</option>
+              </select>
+            </label>
+            <label>Necesidad
+              <select id="need">
+                <option value="productividad">Productividad</option>
+                <option value="clases">Clases en línea</option>
+                <option value="videollamadas">Videollamadas</option>
+                <option value="movilidad">Movilidad</option>
+                <option value="gaming">Gaming</option>
+                <option value="almacenamiento">Almacenamiento</option>
+                <option value="conectividad">Conectividad</option>
+              </select>
+            </label>
+          </div>
+          <label>Presupuesto máximo
+            <div class="money-input"><span>$</span><input id="budget" type="number" min="300" step="100" value="2000"><small>MXN</small></div>
+          </label>
+          <button class="btn primary wide" type="submit">Ejecutar agentes <span>→</span></button>
+          <p class="form-note">Los resultados son académicos y usan únicamente el catálogo y stock registrados en la base de datos.</p>
+        </form>
+        <div class="agent-output glass" id="agentOutput">
+          <div class="empty-state"><span class="pulse-core">AI</span><strong>Listo para analizar</strong><p>Selecciona tu perfil, necesidad y presupuesto. Verás qué aporta cada agente.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="inventario">
+      <div class="section-heading compact">
+        <div><span class="kicker">BASE DE DATOS</span><h2>Inventario en tiempo real</h2><p>Editar precio o existencias modifica SQLite inmediatamente.</p></div>
+        <span class="db-chip">● SQLITE CONECTADA</span>
+      </div>
+      <div class="inventory-card glass">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>SKU</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="inventoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section recent-section">
+      <div class="section-heading compact">
+        <div><span class="kicker">REGISTRO</span><h2>Ventas recientes</h2><p>Cada compra queda guardada y descuenta existencias.</p></div>
+      </div>
+      <div class="sales-list" id="salesList"></div>
+    </section>
+  </main>
+
+  <footer><span>NEXATECH STORE · PROTOTIPO ACADÉMICO 2026</span><span>Los precios, stock y métricas son simulados.</span></footer>
+
+  <aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+    <div class="drawer-head"><div><small>TU SELECCIÓN</small><h3>Carrito</h3></div><button class="icon-btn" id="closeCart">×</button></div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer">
+      <label>Cliente<input id="customerName" type="text" maxlength="80" placeholder="Nombre para la venta demo"></label>
+      <div class="cart-total"><span>Total</span><strong id="cartTotal">$0</strong></div>
+      <button class="btn primary wide" id="checkoutBtn" type="button">Registrar venta <span>→</span></button>
+      <small>La venta se guardará en SQLite y actualizará el inventario.</small>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="toast" id="toast"></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
