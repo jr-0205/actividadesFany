@@ -152,3 +152,71 @@ footer { color: #5f768c; text-align: center; padding: 0 16px 28px; font-size: 11
   .credential-category { display: inline-block; margin-top: 12px; }
   .credential-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Colores por categoría indicados en la práctica */
+.category-woman {
+  --category-color: #f39a45;
+  --category-soft: rgba(243, 154, 69, .12);
+  --category-border: rgba(243, 154, 69, .34);
+}
+.category-man {
+  --category-color: #e5edf5;
+  --category-soft: rgba(229, 237, 245, .08);
+  --category-border: rgba(229, 237, 245, .24);
+}
+.category-girl {
+  --category-color: #ff6b7d;
+  --category-soft: rgba(255, 107, 125, .12);
+  --category-border: rgba(255, 107, 125, .34);
+}
+.category-boy {
+  --category-color: #9f8cff;
+  --category-soft: rgba(159, 140, 255, .12);
+  --category-border: rgba(159, 140, 255, .34);
+}
+.category-neutral {
+  --category-color: #b8c8d8;
+  --category-soft: rgba(184, 200, 216, .06);
+  --category-border: rgba(184, 200, 216, .18);
+}
+
+.category-badge.category-woman,
+.category-badge.category-man,
+.category-badge.category-girl,
+.category-badge.category-boy,
+.category-badge.category-neutral,
+.credential-category.category-woman,
+.credential-category.category-man,
+.credential-category.category-girl,
+.credential-category.category-boy,
+.credential-category.category-neutral,
+.table-category.category-woman,
+.table-category.category-man,
+.table-category.category-girl,
+.table-category.category-boy,
+.table-category.category-neutral {
+  color: var(--category-color);
+  background: var(--category-soft);
+  border-color: var(--category-border);
+}
+
+.credential.category-woman,
+.credential.category-man,
+.credential.category-girl,
+.credential.category-boy {
+  border-color: var(--category-border);
+  box-shadow: 0 24px 80px rgba(0,0,0,.30), 0 0 42px var(--category-soft);
+}
+
+.table-category {
+  display: inline-flex;
+  align-items: center;
+  min-width: 58px;
+  justify-content: center;
+  padding: 5px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
