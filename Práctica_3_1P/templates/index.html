@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sistema multi-agente para inscripción a club deportivo con Flask y SQLite.">
+  <title>ClubFlow · Inscripción multi-agente</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="ClubFlow inicio">
+      <span class="brand-mark">CF</span>
+      <span><strong>ClubFlow</strong><small>IA multi-agente + SQLite</small></span>
+    </a>
+    <div class="status-pill"><span class="status-dot"></span> Sistema disponible</div>
+  </header>
+
+  <main id="inicio" class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PRÁCTICA 3 · SISTEMA WEB</p>
+        <h1>Inscripción deportiva coordinada por <span>agentes inteligentes</span></h1>
+        <p class="hero-copy">El coordinador distribuye la solicitud entre Registro, Validación, Deportes, Horarios, Costos y Confirmación. Cada agente resuelve una parte y la base de datos conserva el resultado.</p>
+        <div class="hero-badges">
+          <span>7 agentes</span><span>Base de datos real</span><span>Flujo trazable</span>
+        </div>
+      </div>
+      <aside class="hero-card">
+        <span class="hero-card-label">Arquitectura</span>
+        <div class="network">
+          <div class="node coordinator">COORD</div>
+          <div class="node">REG</div><div class="node">VAL</div><div class="node">DEP</div>
+          <div class="node">HOR</div><div class="node">COS</div><div class="node">CONF</div>
+        </div>
+        <p>Un agente coordina; seis agentes especializados verifican, consultan, calculan y confirman.</p>
+      </aside>
+    </section>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-heading">
+          <div><p class="kicker">NUEVA SOLICITUD</p><h2>Datos de inscripción</h2></div>
+          <span id="categoryBadge" class="category-badge">Sin clasificar</span>
+        </div>
+
+        <form id="registrationForm" novalidate>
+          <div class="form-grid">
+            <label class="field field-wide"><span>Nombre completo</span><input name="full_name" autocomplete="name" placeholder="Ej. Andrea López García" required></label>
+            <label class="field"><span>Edad</span><input name="age" id="age" type="number" min="6" max="99" placeholder="18" required></label>
+            <label class="field"><span>Sexo / categoría</span>
+              <select name="gender" id="gender" required>
+                <option value="">Selecciona</option>
+                <option value="femenino">Femenino</option>
+                <option value="masculino">Masculino</option>
+              </select>
+            </label>
+            <label class="field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required></label>
+            <label class="field"><span>Teléfono</span><input name="phone" inputmode="numeric" maxlength="14" placeholder="55 1234 5678" required></label>
+          </div>
+
+          <div id="guardianBlock" class="guardian-block hidden">
+            <div class="subheading"><strong>Datos del tutor</strong><span>Obligatorio para menores de 18 años</span></div>
+            <div class="form-grid">
+              <label class="field"><span>Nombre del tutor</span><input name="guardian_name" placeholder="Nombre completo"></label>
+              <label class="field"><span>Teléfono del tutor</span><input name="guardian_phone" inputmode="numeric" maxlength="14" placeholder="55 1234 5678"></label>
+            </div>
+          </div>
+
+          <div class="selector-block">
+            <div class="subheading"><strong>Disciplina y horario</strong><span>Las opciones se filtran por edad y disponibilidad</span></div>
+            <div class="form-grid">
+              <label class="field"><span>Disciplina</span><select name="sport_id" id="sportSelect" required><option value="">Primero indica edad y sexo</option></select></label>
+              <label class="field"><span>Horario</span><select name="schedule_id" id="scheduleSelect" required disabled><option value="">Selecciona una disciplina</option></select></label>
+            </div>
+            <div id="sportInfo" class="sport-info hidden"></div>
+          </div>
+
+          <div id="formMessage" class="form-message hidden" role="alert"></div>
+          <button id="submitButton" class="primary-button" type="submit"><span>Procesar con agentes</span><span aria-hidden="true">→</span></button>
+        </form>
+      </article>
+
+      <aside class="panel agents-panel">
+        <div class="panel-heading"><div><p class="kicker">TRAZABILIDAD</p><h2>Agentes del sistema</h2></div><span class="live-dot">LIVE</span></div>
+        <div id="agentsList" class="agents-list">
+          <div class="agent-card" data-agent="Coordinador"><span class="agent-index">01</span><div><strong>Coordinador</strong><p>Recibe la solicitud y dirige el flujo.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Registro"><span class="agent-index">02</span><div><strong>Registro</strong><p>Recopila y normaliza los datos.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Validación"><span class="agent-index">03</span><div><strong>Validación</strong><p>Comprueba datos y requisitos.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Deportes"><span class="agent-index">04</span><div><strong>Deportes</strong><p>Consulta disciplinas disponibles.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Horarios"><span class="agent-index">05</span><div><strong>Horarios</strong><p>Verifica horario y cupo.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Costos"><span class="agent-index">06</span><div><strong>Costos</strong><p>Calcula inscripción y mensualidad.</p></div><span class="agent-state">En espera</span></div>
+          <div class="agent-card" data-agent="Confirmación"><span class="agent-index">07</span><div><strong>Confirmación</strong><p>Guarda en BD y genera folio.</p></div><span class="agent-state">En espera</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="resultSection" class="result-section hidden">
+      <article class="credential">
+        <div class="credential-top"><div><p>CLUB DEPORTIVO · CREDENCIAL DIGITAL</p><h2 id="resultName">—</h2></div><span id="resultCategory" class="credential-category">—</span></div>
+        <div class="credential-grid">
+          <div><small>Folio</small><strong id="resultFolio">—</strong></div>
+          <div><small>Disciplina</small><strong id="resultSport">—</strong></div>
+          <div><small>Horario</small><strong id="resultSchedule">—</strong></div>
+          <div><small>Primer pago</small><strong id="resultTotal">—</strong></div>
+        </div>
+        <div id="resultCosts" class="cost-breakdown"></div>
+      </article>
+    </section>
+
+    <section class="panel records-panel">
+      <div class="panel-heading"><div><p class="kicker">BASE DE DATOS</p><h2>Inscripciones recientes</h2></div><button id="refreshButton" class="text-button" type="button">Actualizar</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Folio</th><th>Nombre</th><th>Categoría</th><th>Disciplina</th><th>Horario</th><th>Primer pago</th></tr></thead>
+          <tbody id="recordsBody"><tr><td colspan="6" class="empty-cell">Aún no hay inscripciones registradas.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>ClubFlow · Práctica 3_1P · Flask + SQLite · Arquitectura multi-agente</footer>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
