@@ -12,7 +12,7 @@ Duración objetivo: **1:40 a 1:55 minutos**.
 
 **0:28–0:52**
 
-“En tarjeta de débito puedo realizar depósitos, retiros y transferencias. Voy a hacer una transferencia hacia la cuenta de prueba. El agente de Débito valida el saldo y la cuenta destino, actualiza ambos saldos y guarda el movimiento en la base de datos.”
+“En tarjeta de débito puedo realizar depósitos, retiros y transferencias. Voy a transferir mil pesos a la segunda cuenta. El sistema descuenta el monto de la cuenta origen y lo suma a la cuenta destino en una sola transacción. Después uso el botón Cambiar cuenta para comprobar que el saldo sí aumentó en la cuenta receptora.”
 
 **0:52–1:13**
 
