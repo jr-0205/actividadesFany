@@ -11,7 +11,7 @@ from database import init_db, query_all, query_one, reset_demo
 app = Flask(__name__)
 init_db()
 
-PRIMARY_ACCOUNT = "1002003001"
+DEFAULT_ACCOUNT = "1002003001"
 
 debit_agent = DebitoAgent()
 credit_agent = CreditoAgent()
@@ -34,7 +34,29 @@ def _next_occurrence(day: int) -> date:
     return _month_date(year, month, day)
 
 
-def dashboard_data() -> dict:
+def _available_accounts() -> list[dict]:
+    return query_all(
+        """
+        SELECT a.account_number, a.balance, c.full_name
+        FROM accounts a
+        JOIN clients c ON c.id = a.client_id
+        ORDER BY a.account_number
+        """
+    )
+
+
+def _validate_account_number(account_number: str | None) -> str:
+    selected = str(account_number or DEFAULT_ACCOUNT).strip()
+    exists = query_one(
+        "SELECT account_number FROM accounts WHERE account_number = ?",
+        (selected,),
+    )
+    if not exists:
+        raise BankError("Cliente", "La cuenta seleccionada no existe.")
+    return selected
+
+
+def dashboard_data(account_number: str) -> dict:
     account = query_one(
         """
         SELECT
@@ -47,34 +69,44 @@ def dashboard_data() -> dict:
             dc.last4 AS debit_last4
         FROM accounts a
         JOIN clients c ON c.id = a.client_id
-        LEFT JOIN debit_cards dc ON dc.account_id = a.id
+        LEFT JOIN debit_cards dc ON dc.account_id = a.id AND dc.active = 1
         WHERE a.account_number = ?
         """,
-        (PRIMARY_ACCOUNT,),
+        (account_number,),
     )
     if not account:
-        raise RuntimeError("No se encontró la cuenta principal de demostración.")
+        raise BankError("Cliente", "No se encontró la cuenta seleccionada.")
 
     credit = query_one(
         """
         SELECT cc.credit_limit, cc.balance, cc.cutoff_day, cc.due_day, cc.last4
         FROM credit_cards cc
         JOIN accounts a ON a.id = cc.account_id
-        WHERE a.account_number = ?
+        WHERE a.account_number = ? AND cc.active = 1
         """,
-        (PRIMARY_ACCOUNT,),
+        (account_number,),
     )
 
     if credit:
-        credit["available"] = round(float(credit["credit_limit"]) - float(credit["balance"]), 2)
-        credit["minimum_payment"] = round(min(float(credit["balance"]), max(200.0, float(credit["balance"]) * 0.05)), 2) if credit["balance"] > 0 else 0
-        credit["total_payment"] = round(float(credit["balance"]), 2)
+        credit["available"] = round(
+            float(credit["credit_limit"]) - float(credit["balance"]),
+            2,
+        )
+        balance = float(credit["balance"])
+        credit["minimum_payment"] = (
+            round(min(balance, max(200.0, balance * 0.05)), 2)
+            if balance > 0
+            else 0
+        )
+        credit["total_payment"] = round(balance, 2)
         cutoff = _next_occurrence(int(credit["cutoff_day"]))
         due = _next_occurrence(int(credit["due_day"]))
         credit["cutoff_date"] = cutoff.isoformat()
         credit["due_date"] = due.isoformat()
         credit["days_until_due"] = (due - date.today()).days
-        credit["alert"] = bool(credit["balance"] > 0 and 0 <= credit["days_until_due"] <= 5)
+        credit["alert"] = bool(
+            balance > 0 and 0 <= credit["days_until_due"] <= 5
+        )
 
     transactions = query_all(
         """
@@ -82,7 +114,7 @@ def dashboard_data() -> dict:
         FROM transactions
         WHERE account_id = ?
         ORDER BY id DESC
-        LIMIT 10
+        LIMIT 12
         """,
         (account["id"],),
     )
@@ -111,13 +143,13 @@ def dashboard_data() -> dict:
 
     transfer_targets = query_all(
         """
-        SELECT a.account_number, c.full_name
+        SELECT a.account_number, a.balance, c.full_name
         FROM accounts a
         JOIN clients c ON c.id = a.client_id
         WHERE a.account_number <> ?
         ORDER BY a.account_number
         """,
-        (PRIMARY_ACCOUNT,),
+        (account_number,),
     )
 
     logs = query_all(
@@ -136,6 +168,7 @@ def dashboard_data() -> dict:
         "loans": loans,
         "insurance": insurance,
         "transfer_targets": transfer_targets,
+        "accounts": _available_accounts(),
         "logs": logs,
     }
 
@@ -147,45 +180,51 @@ def index():
 
 @app.get("/api/dashboard")
 def dashboard():
-    return jsonify({"ok": True, **dashboard_data()})
+    try:
+        account_number = _validate_account_number(
+            request.args.get("account", DEFAULT_ACCOUNT)
+        )
+        return jsonify({"ok": True, **dashboard_data(account_number)})
+    except BankError as exc:
+        return jsonify({"ok": False, "agent": exc.agent, "error": str(exc)}), 404
+
+
+def _operation_payload() -> dict:
+    payload = request.get_json(silent=True) or {}
+    payload["account_number"] = _validate_account_number(
+        payload.get("account_number")
+    )
+    return payload
 
 
 @app.post("/api/debit")
 def debit():
-    payload = request.get_json(silent=True) or {}
-    payload["account_number"] = PRIMARY_ACCOUNT
     try:
-        return jsonify(debit_agent.process(payload))
+        return jsonify(debit_agent.process(_operation_payload()))
     except BankError as exc:
         return jsonify({"ok": False, "agent": exc.agent, "error": str(exc)}), 400
 
 
 @app.post("/api/credit")
 def credit():
-    payload = request.get_json(silent=True) or {}
-    payload["account_number"] = PRIMARY_ACCOUNT
     try:
-        return jsonify(credit_agent.process(payload))
+        return jsonify(credit_agent.process(_operation_payload()))
     except BankError as exc:
         return jsonify({"ok": False, "agent": exc.agent, "error": str(exc)}), 400
 
 
 @app.post("/api/loans")
 def loans():
-    payload = request.get_json(silent=True) or {}
-    payload["account_number"] = PRIMARY_ACCOUNT
     try:
-        return jsonify(loans_agent.process(payload))
+        return jsonify(loans_agent.process(_operation_payload()))
     except BankError as exc:
         return jsonify({"ok": False, "agent": exc.agent, "error": str(exc)}), 400
 
 
 @app.post("/api/insurance")
 def insurance():
-    payload = request.get_json(silent=True) or {}
-    payload["account_number"] = PRIMARY_ACCOUNT
     try:
-        return jsonify(insurance_agent.process(payload))
+        return jsonify(insurance_agent.process(_operation_payload()))
     except BankError as exc:
         return jsonify({"ok": False, "agent": exc.agent, "error": str(exc)}), 400
 
@@ -193,7 +232,13 @@ def insurance():
 @app.post("/api/reset")
 def reset():
     reset_demo()
-    return jsonify({"ok": True, "message": "Datos de demostración restaurados."})
+    return jsonify(
+        {
+            "ok": True,
+            "message": "Datos de demostración restaurados.",
+            "default_account": DEFAULT_ACCOUNT,
+        }
+    )
 
 
 if __name__ == "__main__":
