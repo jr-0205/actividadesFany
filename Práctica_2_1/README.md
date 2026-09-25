@@ -1,4 +1,4 @@
-# Práctica 5.1 — NexaTech Store
+# Práctica 2.1 — NexaTech Store
 
 Prototipo web de una empresa que comercializa artículos tecnológicos, desarrollado a partir de la propuesta de **IA Agéntica** documentada previamente.
 
@@ -34,7 +34,7 @@ Prototipo web de una empresa que comercializa artículos tecnológicos, desarrol
 
 ## Ejecutar el proyecto
 
-Desde la carpeta `Práctica_5_1`:
+Desde la carpeta `Práctica_2_1`:
 
 ```bash
 python -m venv .venv
