@@ -24,6 +24,8 @@ Desarrollar un sistema bancario funcional que integre los puntos indicados en cl
 - Realizar transferencias entre cuentas.
 - Guardar cada movimiento en SQLite.
 - Validar saldo suficiente y cuenta destino.
+- Ejecutar la transferencia como una sola transacción atómica: si algo falla, ningún saldo cambia.
+- Mostrar saldo anterior y saldo posterior después de cada operación.
 
 ### Tarjeta de crédito
 - Línea de crédito aprobada.
@@ -101,7 +103,7 @@ El sistema inicia con dos cuentas ficticias:
 - Cuenta principal: 1002003001
 - Cuenta destino para transferencias: 1002003002
 
-Esto permite demostrar una transferencia sin tener que capturar clientes manualmente.
+Esto permite demostrar una transferencia sin tener que capturar clientes manualmente. El botón **Cambiar cuenta** alterna entre ambas cuentas para comprobar inmediatamente que el dinero salió de una y entró en la otra.
 
 ## Prueba rápida
 
@@ -136,3 +138,29 @@ El botón **Restaurar datos de prueba** deja el sistema listo para repetir la de
 ## Nota académica
 
 El sistema es una simulación educativa. No procesa dinero real, no se conecta con instituciones financieras y los datos de tasas, coberturas, tarjetas y clientes son ficticios.
+
+
+## Reglas de integridad de saldos
+
+- Ningún saldo de débito puede quedar por debajo de cero.
+- Los montos deben ser mayores a cero.
+- Una transferencia no puede enviarse a la misma cuenta origen.
+- La cuenta origen y la cuenta destino deben existir.
+- El retiro de la cuenta origen y el depósito en la cuenta destino se confirman juntos.
+- Cada transferencia genera dos movimientos: salida en origen y entrada en destino.
+- Un pago de tarjeta de crédito descuenta el dinero de la cuenta de débito asociada y reduce la deuda de crédito en la misma operación.
+- La línea de crédito no puede ser excedida.
+- Los datos iniciales son consistentes: la cuenta 1002003001 inicia con $12,500.00 y la 1002003002 con $5,000.00.
+
+## Pruebas automáticas
+
+Desde la carpeta de la práctica puedes validar las reglas principales con:
+
+    python -m unittest discover -s tests -v
+
+Las pruebas comprueban:
+
+- Transferencia de $1,000: 12,500 → 11,500 y 5,000 → 6,000.
+- Rechazo y rollback cuando el saldo es insuficiente.
+- Consistencia entre pago de crédito y saldo de débito.
+- Saldos iniciales de las dos cuentas demo.
