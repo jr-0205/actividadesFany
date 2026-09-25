@@ -3,31 +3,23 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 
 
-# ============================================================
-# PRÁCTICA 4.1
-# Modelo supervisado de predicción con Regresión Lineal
-# ============================================================
 
-# 1. Datos de entrenamiento
-# Tamaño de las casas en metros cuadrados.
 X_tamano = np.array([50, 65, 80, 100, 120, 150]).reshape(-1, 1)
 
-# Precio de las casas en miles de dólares.
 y_precio = np.array([150, 185, 210, 260, 300, 380])
 
 
-# 2. Crear y entrenar el modelo
 modelo = LinearRegression()
 modelo.fit(X_tamano, y_precio)
 
-print("¡Modelo entrenado con éxito!")
-print("-" * 50)
 
 
-# 3. Realizar una predicción
-# El modelo no recibió una casa de 90 m² durante el entrenamiento.
+
 casa_nueva_m2 = 90
 prediccion = modelo.predict([[casa_nueva_m2]])
+
+
+
 
 print(f"Para una casa nueva de {casa_nueva_m2} m²:")
 print(
