@@ -50,7 +50,7 @@ button,input,select{font:inherit} button{cursor:pointer} a{color:inherit;text-de
 .workspace,.credit-layout,.products-grid,.bottom-grid{display:grid;gap:16px;margin-bottom:16px}
 .workspace{grid-template-columns:.8fr 1.2fr}.credit-layout{grid-template-columns:1fr 1fr}.products-grid{grid-template-columns:1fr 1fr 1fr}.bottom-grid{grid-template-columns:1fr 1fr}
 .panel{padding:22px}.panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
-.panel-heading h2{margin:0;font-size:18px;letter-spacing:-.02em}.chip{padding:7px 10px;border-radius:999px;border:1px solid var(--line);color:#95aab6;font-size:9px;white-space:nowrap}
+.panel-heading h2{margin:0;font-size:18px;letter-spacing:-.02em}.client-heading-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.chip{padding:7px 10px;border-radius:999px;border:1px solid var(--line);color:#95aab6;font-size:9px;white-space:nowrap}
 .chip.success{color:var(--accent);border-color:rgba(99,231,183,.22);background:rgba(99,231,183,.05)}
 
 .client-card{display:flex;align-items:center;gap:16px;min-height:110px}.avatar{
@@ -101,7 +101,7 @@ th,td{text-align:left;border-top:1px solid var(--line);padding:12px 10px;font-si
   .operation-form,.operation-form.compact{grid-template-columns:1fr 1fr}
 }
 @media(max-width:720px){
-  .topbar,.shell{width:min(100% - 20px,1180px)}.system-status{display:none}.hero{min-height:auto;grid-template-columns:1fr;padding:58px 2px 32px;gap:24px}.hero h1{font-size:43px}
+  .topbar,.shell{width:min(100% - 20px,1180px)}.system-status{display:none}.account-switch-button span{display:none}.account-switch-button{padding:9px 11px}.hero{min-height:auto;grid-template-columns:1fr;padding:58px 2px 32px;gap:24px}.hero h1{font-size:43px}
   .summary-grid,.products-grid,.bottom-grid{grid-template-columns:1fr}.trace-panel{grid-column:auto}.operation-form,.operation-form.compact,.two-cols{grid-template-columns:1fr}
   .credit-line{margin-top:38px}.credit-line strong{font-size:20px}.credit-card-visual{min-height:290px}.panel{padding:18px}.reset-zone{align-items:flex-end;flex-direction:column}
 }
