@@ -70,7 +70,9 @@ class DebitoAgent:
         if action not in {"deposit", "withdraw", "transfer"}:
             raise BankError(self.name, "Selecciona depósito, retiro o transferencia.")
 
+        target_balance = None
         with get_connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             source = conn.execute(
                 "SELECT id, account_number, balance FROM accounts WHERE account_number = ?",
                 (source_number,),
@@ -78,9 +80,11 @@ class DebitoAgent:
             if not source:
                 raise BankError(self.name, "La cuenta origen no existe.")
 
+            balance_before = round(float(source["balance"]), 2)
+
             if action == "deposit":
                 conn.execute(
-                    "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+                    "UPDATE accounts SET balance = ROUND(balance + ?, 2) WHERE id = ?",
                     (amount, source["id"]),
                 )
                 conn.execute(
@@ -93,12 +97,19 @@ class DebitoAgent:
                 message = f"Depósito aplicado por ${amount:,.2f} MXN."
 
             elif action == "withdraw":
-                if float(source["balance"]) < amount:
-                    raise BankError(self.name, "Saldo insuficiente para realizar el retiro.")
-                conn.execute(
-                    "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-                    (amount, source["id"]),
+                cursor = conn.execute(
+                    """
+                    UPDATE accounts
+                    SET balance = ROUND(balance - ?, 2)
+                    WHERE id = ? AND balance >= ?
+                    """,
+                    (amount, source["id"], amount),
                 )
+                if cursor.rowcount != 1:
+                    raise BankError(
+                        self.name,
+                        f"Saldo insuficiente. Disponible: ${balance_before:,.2f} MXN.",
+                    )
                 conn.execute(
                     """
                     INSERT INTO transactions (account_id, type, amount, description)
@@ -111,25 +122,33 @@ class DebitoAgent:
             else:
                 target_number = str(payload.get("target_account", "")).strip()
                 if not target_number:
-                    raise BankError(self.name, "Escribe la cuenta destino.")
+                    raise BankError(self.name, "Selecciona una cuenta destino.")
                 if target_number == source_number:
                     raise BankError(self.name, "La cuenta destino debe ser distinta a la cuenta origen.")
 
                 target = conn.execute(
-                    "SELECT id, account_number FROM accounts WHERE account_number = ?",
+                    "SELECT id, account_number, balance FROM accounts WHERE account_number = ?",
                     (target_number,),
                 ).fetchone()
                 if not target:
                     raise BankError(self.name, "La cuenta destino no existe.")
-                if float(source["balance"]) < amount:
-                    raise BankError(self.name, "Saldo insuficiente para realizar la transferencia.")
+
+                cursor = conn.execute(
+                    """
+                    UPDATE accounts
+                    SET balance = ROUND(balance - ?, 2)
+                    WHERE id = ? AND balance >= ?
+                    """,
+                    (amount, source["id"], amount),
+                )
+                if cursor.rowcount != 1:
+                    raise BankError(
+                        self.name,
+                        f"Saldo insuficiente. Disponible: ${balance_before:,.2f} MXN.",
+                    )
 
                 conn.execute(
-                    "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-                    (amount, source["id"]),
-                )
-                conn.execute(
-                    "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+                    "UPDATE accounts SET balance = ROUND(balance + ?, 2) WHERE id = ?",
                     (amount, target["id"]),
                 )
                 conn.execute(
@@ -148,16 +167,57 @@ class DebitoAgent:
                     """,
                     (target["id"], amount, "Transferencia recibida", source_number),
                 )
+                target_balance = round(
+                    float(
+                        conn.execute(
+                            "SELECT balance FROM accounts WHERE id = ?",
+                            (target["id"],),
+                        ).fetchone()["balance"]
+                    ),
+                    2,
+                )
                 message = f"Transferencia de ${amount:,.2f} MXN enviada a {target_number}."
 
-            new_balance = conn.execute(
-                "SELECT balance FROM accounts WHERE id = ?", (source["id"],)
-            ).fetchone()["balance"]
+            new_balance = round(
+                float(
+                    conn.execute(
+                        "SELECT balance FROM accounts WHERE id = ?",
+                        (source["id"],),
+                    ).fetchone()["balance"]
+                ),
+                2,
+            )
 
-        trace.append(AgentStep(self.name, "ok", message))
-        trace.append(AgentStep("Coordinador", "ok", "Operación completada y guardada en la base de datos."))
+        trace.append(
+            AgentStep(
+                self.name,
+                "ok",
+                f"{message} Saldo: ${balance_before:,.2f} → ${new_balance:,.2f}.",
+            )
+        )
+        if target_balance is not None:
+            trace.append(
+                AgentStep(
+                    self.name,
+                    "ok",
+                    f"Saldo destino actualizado a ${target_balance:,.2f} MXN.",
+                )
+            )
+        trace.append(
+            AgentStep(
+                "Coordinador",
+                "ok",
+                "Operación confirmada en una sola transacción de base de datos.",
+            )
+        )
         _log(self.name, action, message)
-        return {"ok": True, "balance": round(float(new_balance), 2), "trace": [x.to_dict() for x in trace]}
+        return {
+            "ok": True,
+            "balance_before": balance_before,
+            "balance": new_balance,
+            "target_balance": target_balance,
+            "trace": [x.to_dict() for x in trace],
+        }
 
 
 class CreditoAgent:
@@ -173,9 +233,10 @@ class CreditoAgent:
         trace = [AgentStep("Coordinador", "ok", "Operación de crédito recibida.")]
 
         with get_connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             card = conn.execute(
                 """
-                SELECT cc.id, cc.credit_limit, cc.balance
+                SELECT cc.id, cc.credit_limit, cc.balance, a.id AS account_id, a.balance AS debit_balance
                 FROM credit_cards cc
                 JOIN accounts a ON a.id = cc.account_id
                 WHERE a.account_number = ? AND cc.active = 1
@@ -186,11 +247,14 @@ class CreditoAgent:
                 raise BankError(self.name, "La cuenta no tiene una tarjeta de crédito activa.")
 
             if action == "purchase":
-                available = float(card["credit_limit"]) - float(card["balance"])
+                available = round(float(card["credit_limit"]) - float(card["balance"]), 2)
                 if amount > available:
-                    raise BankError(self.name, "La compra supera el crédito disponible.")
+                    raise BankError(
+                        self.name,
+                        f"La compra supera el crédito disponible de ${available:,.2f} MXN.",
+                    )
                 conn.execute(
-                    "UPDATE credit_cards SET balance = balance + ? WHERE id = ?",
+                    "UPDATE credit_cards SET balance = ROUND(balance + ?, 2) WHERE id = ?",
                     (amount, card["id"]),
                 )
                 conn.execute(
@@ -202,12 +266,31 @@ class CreditoAgent:
                 )
                 message = f"Compra autorizada por ${amount:,.2f} MXN."
             else:
-                current = float(card["balance"])
-                if current <= 0:
+                current_debt = round(float(card["balance"]), 2)
+                if current_debt <= 0:
                     raise BankError(self.name, "La tarjeta no tiene saldo pendiente.")
-                applied = min(amount, current)
+
+                applied = min(amount, current_debt)
+                debit_balance = round(float(card["debit_balance"]), 2)
+                if debit_balance < applied:
+                    raise BankError(
+                        self.name,
+                        f"Saldo de débito insuficiente para pagar la tarjeta. Disponible: ${debit_balance:,.2f} MXN.",
+                    )
+
+                cursor = conn.execute(
+                    """
+                    UPDATE accounts
+                    SET balance = ROUND(balance - ?, 2)
+                    WHERE id = ? AND balance >= ?
+                    """,
+                    (applied, card["account_id"], applied),
+                )
+                if cursor.rowcount != 1:
+                    raise BankError(self.name, "El saldo cambió antes de confirmar el pago. Intenta nuevamente.")
+
                 conn.execute(
-                    "UPDATE credit_cards SET balance = balance - ? WHERE id = ?",
+                    "UPDATE credit_cards SET balance = ROUND(balance - ?, 2) WHERE id = ?",
                     (applied, card["id"]),
                 )
                 conn.execute(
@@ -217,16 +300,50 @@ class CreditoAgent:
                     """,
                     (card["id"], applied, "Pago a tarjeta de crédito"),
                 )
-                message = f"Pago aplicado por ${applied:,.2f} MXN."
+                conn.execute(
+                    """
+                    INSERT INTO transactions
+                    (account_id, type, amount, description, related_account)
+                    VALUES (?, 'PAGO_TARJETA', ?, ?, ?)
+                    """,
+                    (card["account_id"], applied, "Pago a tarjeta de crédito", f"TDC ••••"),
+                )
+                message = f"Pago aplicado por ${applied:,.2f} MXN desde el saldo de débito."
 
-            new_balance = conn.execute(
-                "SELECT balance FROM credit_cards WHERE id = ?", (card["id"],)
-            ).fetchone()["balance"]
+            new_balance = round(
+                float(
+                    conn.execute(
+                        "SELECT balance FROM credit_cards WHERE id = ?",
+                        (card["id"],),
+                    ).fetchone()["balance"]
+                ),
+                2,
+            )
+            debit_balance_after = round(
+                float(
+                    conn.execute(
+                        "SELECT balance FROM accounts WHERE id = ?",
+                        (card["account_id"],),
+                    ).fetchone()["balance"]
+                ),
+                2,
+            )
 
         trace.append(AgentStep(self.name, "ok", message))
-        trace.append(AgentStep("Coordinador", "ok", "El estado de la tarjeta fue actualizado."))
+        trace.append(
+            AgentStep(
+                "Coordinador",
+                "ok",
+                "Saldos de crédito y débito quedaron consistentes en la base de datos.",
+            )
+        )
         _log(self.name, action, message)
-        return {"ok": True, "credit_balance": round(float(new_balance), 2), "trace": [x.to_dict() for x in trace]}
+        return {
+            "ok": True,
+            "credit_balance": new_balance,
+            "debit_balance": debit_balance_after,
+            "trace": [x.to_dict() for x in trace],
+        }
 
 
 class PrestamosAgent:
@@ -255,7 +372,8 @@ class PrestamosAgent:
 
         with get_connection() as conn:
             account = conn.execute(
-                "SELECT id FROM accounts WHERE account_number = ?", (account_number,)
+                "SELECT id FROM accounts WHERE account_number = ?",
+                (account_number,),
             ).fetchone()
             if not account:
                 raise BankError(self.name, "La cuenta asociada no existe.")
@@ -284,7 +402,12 @@ class PrestamosAgent:
             AgentStep(self.name, "ok", f"Tasa anual de demostración: {annual_rate:.1f}%."),
             AgentStep(self.name, "ok", f"Pago mensual estimado: ${payment:,.2f} MXN."),
         ]
-        return {"ok": True, "monthly_payment": payment, "annual_rate": annual_rate, "trace": [x.to_dict() for x in trace]}
+        return {
+            "ok": True,
+            "monthly_payment": payment,
+            "annual_rate": annual_rate,
+            "trace": [x.to_dict() for x in trace],
+        }
 
 
 class SegurosAgent:
@@ -306,7 +429,8 @@ class SegurosAgent:
         premium, coverage = self.products[insurance_type]
         with get_connection() as conn:
             account = conn.execute(
-                "SELECT id FROM accounts WHERE account_number = ?", (account_number,)
+                "SELECT id FROM accounts WHERE account_number = ?",
+                (account_number,),
             ).fetchone()
             if not account:
                 raise BankError(self.name, "La cuenta asociada no existe.")
@@ -328,4 +452,9 @@ class SegurosAgent:
             AgentStep(self.name, "ok", coverage),
             AgentStep(self.name, "ok", message),
         ]
-        return {"ok": True, "premium": premium, "coverage": coverage, "trace": [x.to_dict() for x in trace]}
+        return {
+            "ok": True,
+            "premium": premium,
+            "coverage": coverage,
+            "trace": [x.to_dict() for x in trace],
+        }
