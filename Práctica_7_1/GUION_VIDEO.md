@@ -2,35 +2,39 @@
 
 Duración objetivo: **1:35 a 1:55 minutos**.
 
-## 0:00–0:15
+## 0:00–0:12
 
-“Esta es mi Práctica 7 sobre predicción y clasificación de ventas de una tienda de productos tecnológicos. La desarrollé en Python para Google Colab utilizando Pandas, scikit-learn y Matplotlib.”
+“Esta es mi Práctica 7, un sistema de ventas de productos tecnológicos desarrollado completamente con Python y Google Colab. Utiliza aprendizaje supervisado para predecir ventas y clasificar la demanda.”
 
-## 0:15–0:30
+## 0:12–0:28
 
-“El conjunto contiene 20 registros con producto, precio, visitas, publicidad, descuento y ventas. También se crea la variable Demanda: es Alta cuando se venden 50 unidades o más y Baja cuando se venden menos de 50.”
+“En el sistema puedo seleccionar el producto y capturar su precio, visitas estimadas, inversión en publicidad y porcentaje de descuento.”
 
-## 0:30–0:52
+## 0:28–0:50
 
-“El primer modelo es una regresión lineal. Utiliza precio, visitas, publicidad y descuento para predecir las unidades vendidas. Al ejecutar la evaluación obtengo las predicciones de prueba y las métricas MAE, MSE y R cuadrada. En esta ejecución el MAE es aproximadamente 5.49 y R cuadrada es 0.854.”
+“Voy a utilizar el ejemplo de una laptop con precio de 13,500 pesos, 1,500 visitas, 3,000 pesos de publicidad y 15 por ciento de descuento. Al presionar Analizar producto, el modelo de regresión estima aproximadamente 82.35 unidades.”
 
-## 0:52–1:15
+## 0:50–1:08
 
-“El segundo modelo es un árbol de decisión que clasifica la demanda como Alta o Baja. La evaluación muestra la exactitud, el reporte de clasificación y la matriz de confusión. En los cinco registros de prueba clasificó correctamente los cinco, aunque este resultado debe tomarse con cautela porque el conjunto es pequeño y ficticio.”
+“El árbol de decisión clasifica la demanda como Alta. El sistema también calcula el precio después del descuento y un ingreso bruto estimado a partir de las unidades predichas.”
 
-## 1:15–1:38
+## 1:08–1:25
 
-“Finalmente pruebo una nueva laptop con precio de 13,500 pesos, 1,500 visitas, 3,000 pesos de publicidad y 15 por ciento de descuento. El modelo estima aproximadamente 82.35 unidades y clasifica la demanda como Alta.”
+“Voy a modificar uno de los datos y vuelvo a analizar. El resultado cambia porque el sistema genera la predicción a partir de las características comerciales capturadas.”
 
-## 1:38–1:52
+## 1:25–1:42
 
-“Con la regresión se puede apoyar la planificación de inventario y con la clasificación se pueden identificar niveles de demanda. Los dos modelos son complementarios y sus predicciones no garantizan ventas futuras.”
+“En Información del modelo se observan las métricas. Para regresión se muestran MAE, MSE y R cuadrada; para clasificación se muestra la exactitud. También se puede revisar el conjunto de 20 registros usado en la práctica.”
+
+## 1:42–1:52
+
+“De esta manera, el sistema integra predicción de ventas, clasificación de demanda e interpretación comercial utilizando aprendizaje supervisado.”
 
 ## Qué mostrar en pantalla
 
-1. Notebook abierto en Colab.
-2. Tabla del conjunto de datos.
-3. Celda de regresión y sus métricas.
-4. Gráfica de valores reales contra predichos.
-5. Celda de clasificación y matriz de confusión.
-6. Celda final de la nueva laptop.
+1. Interfaz TechMarket AI.
+2. Campos del producto.
+3. Botón **Analizar producto**.
+4. Resultado de ventas y demanda.
+5. Cambiar un valor y volver a analizar.
+6. Abrir brevemente **Información del modelo**.
