@@ -131,7 +131,7 @@ def rows_for(department, search_term=""):
             cur.execute(f"SELECT {','.join(fields)} FROM {spec['table']} ORDER BY {fields[0]} DESC LIMIT 500")
         data = cur.fetchall()
         cur.close()
-        return [fields] + [list(map(lambda v: str(v) if v is not None else "", row)) for row in data]
+        return [list(map(lambda v: str(v) if v is not None else "", row)) for row in data]
     finally:
         conn.close()
 
@@ -203,57 +203,112 @@ def login(user, password):
         return "Acceso concedido. Selecciona un departamento en las pestañas.", gr.update(visible=True)
     return "Usuario o contraseña incorrectos. Prueba admin / calzado10.", gr.update(visible=False)
 
+def safe_rows_for(department, search_term=""):
+    """Evita que un error temporal de BD impida cargar toda la interfaz."""
+    try:
+        return rows_for(department, search_term)
+    except Error:
+        return []
+
 def build_department_tab(department):
     spec = DEPARTMENTS[department]
     fields = spec["fields"]
+    descriptions = {
+        "Almacén de Insumos": "Controla las materias primas y materiales disponibles para fabricar calzado.",
+        "Producción": "Registra cada lote fabricado, con fecha, modelo, talla y cantidad.",
+        "Ventas": "Guarda las ventas realizadas y los datos básicos del cliente y del calzado.",
+        "Recursos Humanos": "Administra la información de contacto, puesto y turno del personal.",
+        "Inventario de Producto Terminado": "Controla los pares listos para vender y su ubicación en el almacén.",
+    }
     with gr.Tab(department):
-        gr.Markdown(f"### Gestión de {department}\nUsa **Agregar**, **Actualizar** o **Eliminar**. Para actualizar o eliminar, indica el ID actual.")
-        search = gr.Textbox(label="Buscar", placeholder="Buscar por nombre, modelo, color, talla…")
-        table = gr.Dataframe(value=rows_for(department), label="Registros (máximo 500)", interactive=False)
-        inputs = []
+        gr.Markdown(f"## {department}")
+        gr.Markdown(descriptions.get(department, "Administra los registros de este departamento."))
         with gr.Row():
-            for field, label, kind in fields:
-                if kind == "number":
-                    component = gr.Number(label=label, precision=0 if field in ("id", "id_emp", "existencias", "cantidad") else 2)
-                else:
-                    component = gr.Textbox(label=label)
-                inputs.append(component)
-        record_id = gr.Textbox(label="ID actual para actualizar/eliminar", placeholder="Ej. 1")
-        status = gr.Markdown()
-        with gr.Row():
-            add_btn = gr.Button("Agregar registro", variant="primary")
-            update_btn = gr.Button("Actualizar registro")
-            delete_btn = gr.Button("Eliminar registro", variant="stop")
-            refresh_btn = gr.Button("Actualizar tabla")
-        search.change(lambda q: rows_for(department, q), search, table)
-        add_btn.click(lambda *v: save_record(department, "Agregar", v[:-1], v[-1]), inputs=inputs + [record_id], outputs=[status, table])
-        update_btn.click(lambda *v: save_record(department, "Actualizar", v[:-1], v[-1]), inputs=inputs + [record_id], outputs=[status, table])
-        delete_btn.click(lambda rid: save_record(department, "Eliminar", [], rid), inputs=record_id, outputs=[status, table])
-        refresh_btn.click(lambda: rows_for(department), outputs=table)
+            search = gr.Textbox(label="🔎 Buscar registros", placeholder="Escribe modelo, nombre, color, talla…", scale=4)
+            refresh_btn = gr.Button("↻ Actualizar lista", scale=1)
+        table = gr.Dataframe(
+            value=safe_rows_for(department),
+            headers=[f[1] for f in fields],
+            label="Registros guardados",
+            interactive=False,
+            wrap=True,
+            max_height=320,
+        )
+        with gr.Accordion("➕ Agregar un registro nuevo", open=True):
+            gr.Markdown("Completa los datos y pulsa **Guardar registro**. Puedes dejar el ID vacío para que MySQL lo asigne automáticamente.")
+            inputs = []
+            for row_start in range(0, len(fields), 3):
+                with gr.Row():
+                    for field, label, kind in fields[row_start:row_start + 3]:
+                        if field in ("id", "id_emp"):
+                            component = gr.Number(label=f"{label} (opcional)", precision=0, value=None)
+                        elif kind == "number":
+                            component = gr.Number(label=label, precision=0 if field in ("existencias", "cantidad") else 2, value=None)
+                        else:
+                            component = gr.Textbox(label=label, placeholder=f"Escribe {label.lower()}")
+                        inputs.append(component)
+            add_btn = gr.Button("💾 Guardar registro", variant="primary")
+        with gr.Accordion("✏️ Editar o eliminar un registro", open=False):
+            gr.Markdown("1. Escribe el **ID actual** del registro. 2. Para editar, completa los campos de arriba con los nuevos valores y pulsa **Guardar cambios**. 3. Para borrar, pulsa **Eliminar registro**. Esta acción no se puede deshacer.")
+            with gr.Row():
+                record_id = gr.Textbox(label="ID del registro que deseas modificar", placeholder="Ejemplo: 3")
+                update_btn = gr.Button("Guardar cambios", variant="primary")
+                delete_btn = gr.Button("Eliminar registro", variant="stop")
+        status = gr.Markdown("Selecciona una acción para ver aquí el resultado.")
+        search.change(lambda q: safe_rows_for(department, q), inputs=search, outputs=table)
+        refresh_btn.click(lambda q: safe_rows_for(department, q), inputs=search, outputs=table)
+        add_btn.click(
+            lambda *v: save_record(department, "Agregar", v, ""),
+            inputs=inputs,
+            outputs=[status, table],
+        )
+        update_btn.click(
+            lambda rid, *v: save_record(department, "Actualizar", v, rid),
+            inputs=[record_id] + inputs,
+            outputs=[status, table],
+        )
+        delete_btn.click(
+            lambda rid: save_record(department, "Eliminar", [], rid),
+            inputs=record_id,
+            outputs=[status, table],
+        )
 
 try:
     initialize_database()
-    DB_STATUS = "✅ Conexión con MySQL establecida. Se verificaron las tablas y los registros de demostración."
+    DB_STATUS = "🟢 **Base de datos conectada.** MySQL está listo y las tablas se revisaron correctamente."
 except Error as exc:
-    DB_STATUS = f"⚠️ No se pudo conectar a MySQL: {exc}. Revisa README.md y las variables DB_HOST, DB_USER, DB_PASSWORD y DB_NAME."
+    DB_STATUS = f"🔴 **No se pudo conectar con MySQL.** {exc}\n\nAbre XAMPP, inicia MySQL y revisa la configuración de conexión en `app.py`."
 
-with gr.Blocks(title="Práctica 10 · Fábrica de calzado", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 👞 Práctica 10: Fábrica de calzado\nSistema de gestión con interfaz gráfica y base de datos MySQL.")
-    gr.Markdown(DB_STATUS)
+with gr.Blocks(title="Fábrica de Calzado | Práctica 10", theme=gr.themes.Soft(), css="""
+    .main-title {text-align:center}
+    .subtle {opacity:.82}
+    footer {visibility:hidden}
+""") as demo:
+    gr.Markdown("# 👞 Fábrica de Calzado", elem_classes=["main-title"])
+    gr.Markdown("### Sistema de control de materiales, producción, ventas y personal", elem_classes=["main-title"])
+    gr.Markdown("**Bienvenido.** Inicia sesión y elige un departamento en las pestañas. Puedes buscar, agregar, editar y eliminar registros.")
+    with gr.Accordion("Estado de conexión con la base de datos", open=False):
+        gr.Markdown(DB_STATUS)
+        gr.Markdown("**¿Usas XAMPP?** Asegúrate de que el módulo MySQL esté iniciado antes de abrir esta página.")
+    gr.Markdown("---")
     with gr.Group():
-        gr.Markdown("## Log In")
+        gr.Markdown("## 🔐 Inicio de sesión")
+        gr.Markdown("Introduce las credenciales de demostración para entrar al panel.")
         with gr.Row():
-            username = gr.Textbox(label="Usuario", value="", placeholder="Usuario")
-            password = gr.Textbox(label="Contraseña", type="password", placeholder="Contraseña")
-        login_btn = gr.Button("Iniciar sesión", variant="primary")
+            username = gr.Textbox(label="Usuario", placeholder="Ej. admin", scale=1)
+            password = gr.Textbox(label="Contraseña", type="password", placeholder="Escribe tu contraseña", scale=1)
+        login_btn = gr.Button("Entrar al sistema", variant="primary")
         login_status = gr.Markdown()
     workspace = gr.Column(visible=False)
     with workspace:
-        gr.Markdown("## Panel de departamentos")
+        gr.Markdown("---")
+        gr.Markdown("# 📋 Panel de departamentos")
+        gr.Markdown("**Cómo usarlo:** selecciona una pestaña, busca un registro o abre el formulario para agregar, editar o eliminar.")
         with gr.Tabs():
             for dept in DEPARTMENTS:
                 build_department_tab(dept)
     login_btn.click(login, inputs=[username, password], outputs=[login_status, workspace])
 
+
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", "7860")))
+    demo.launch(server_name="127.0.0.1", server_port=int(os.getenv("PORT", "7860")))
