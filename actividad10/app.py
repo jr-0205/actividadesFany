@@ -90,7 +90,7 @@ def initialize_database():
                 ],
             }
             for table, rows in seed.items():
-                cols = [x[0] for x in DEPARTMENTS[next(name for name, spec in DEPARTMENTS.items() if spec["table"] == table)]["fields"]]
+                cols = [x[0] for x in DEPARTMENTS[next(name for name, spec in DEPARTMENTS.items() if spec["table"] == table)]["fields"]][1:]  # la PK AUTO_INCREMENT se genera en MySQL
                 placeholders = ",".join(["%s"] * len(cols))
                 cur.executemany(f"INSERT INTO {table} ({','.join(cols)}) VALUES ({placeholders})", rows)
             conn.commit()
