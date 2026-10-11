@@ -4,8 +4,8 @@ Aplicación gráfica en Python + Gradio conectada a MySQL. Incluye inicio de ses
 
 ## Requisitos
 - Python 3.10 o superior
-- MySQL Server 8.x (o compatible)
-- Base de datos y usuario con permisos de creación/lectura/escritura
+- MySQL Server 8.x (o compatible), o XAMPP con MySQL/MariaDB iniciado
+- Usuario con permisos para crear la base de datos y tablas
 
 ## Instalación
 1. Abre una terminal dentro de `actividad10/`.
@@ -18,12 +18,18 @@ Aplicación gráfica en Python + Gradio conectada a MySQL. Incluye inicio de ses
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
-3. Crea la base de datos en MySQL:
-   ```sql
-   CREATE DATABASE fabrica_calzado CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-   También puedes ejecutar `schema.sql` desde MySQL Workbench. La aplicación crea las tablas automáticamente si no existen.
-4. Configura la conexión mediante variables de entorno (no subas contraseñas al repositorio):
+3. **Si usas XAMPP (recomendado para esta práctica):**
+   - Abre XAMPP Control Panel y pulsa **Start** en la fila **MySQL**. Debe quedar en verde y mostrar el puerto `3306`.
+   - Abre `http://localhost/phpmyadmin`.
+   - En la pestaña **SQL**, ejecuta:
+     ```sql
+     CREATE DATABASE IF NOT EXISTS fabrica_calzado
+       CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+     ```
+   - La aplicación crea las tablas y los datos de prueba al arrancar. La versión actual también intenta crear la base automáticamente si el usuario MySQL tiene permisos.
+   - En una instalación estándar de XAMPP, usa `root` y contraseña vacía. Si configuraste contraseña, utiliza esa contraseña.
+   También puedes ejecutar `schema.sql` desde phpMyAdmin.
+4. Configura la conexión mediante variables de entorno si tu XAMPP tiene credenciales diferentes (no subas contraseñas al repositorio):
    - Windows PowerShell:
      ```powershell
      $env:DB_HOST="localhost"
