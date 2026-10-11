@@ -6,12 +6,29 @@ import gradio as gr
 
 # Configuración por variables de entorno: no guardes contraseñas en el repositorio.
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
     "port": int(os.getenv("DB_PORT", "3306")),
     "user": os.getenv("DB_USER", "root"),
+    # En XAMPP, root normalmente no tiene contraseña por defecto.
     "password": os.getenv("DB_PASSWORD", ""),
     "database": os.getenv("DB_NAME", "fabrica_calzado"),
 }
+
+def ensure_database_exists():
+    """Crea la base de datos si no existe (requiere permisos CREATE DATABASE)."""
+    server_config = {key: value for key, value in DB_CONFIG.items() if key != "database"}
+    conn = mysql.connector.connect(**server_config)
+    try:
+        cur = conn.cursor()
+        db_name = DB_CONFIG["database"]
+        # El nombre viene de la configuración local, no de una entrada del usuario.
+        cur.execute(
+            f"CREATE DATABASE IF NOT EXISTS `{db_name}` "
+            "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
+        cur.close()
+    finally:
+        conn.close()
 
 DEPARTMENTS = {
     "Almacén de Insumos": {
@@ -51,7 +68,8 @@ def connect():
     return mysql.connector.connect(**DB_CONFIG)
 
 def initialize_database():
-    """Crea tablas y carga 20 registros de demostración por departamento una sola vez."""
+    """Crea la base, las tablas y carga datos de demostración cuando corresponde."""
+    ensure_database_exists()
     definitions = {
         "insumos": "id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(100) NOT NULL, marca VARCHAR(80), composicion VARCHAR(120), existencias INT DEFAULT 0, color VARCHAR(40), tamano VARCHAR(40)",
         "produccion": "id INT AUTO_INCREMENT PRIMARY KEY, fecha DATE, hora VARCHAR(10), modelo VARCHAR(80), color VARCHAR(40), talla VARCHAR(10), cantidad INT DEFAULT 0, tipo VARCHAR(50)",
