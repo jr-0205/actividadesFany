@@ -1,0 +1,3 @@
+mau 11
+jurado 15
+daen 8 
